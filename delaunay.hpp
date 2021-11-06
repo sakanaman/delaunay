@@ -5,23 +5,16 @@
 
 #include<set>
 #include<cmath>
+#include <string>
 
 
 class Delaunay
 {
     public:
 
-    //外部境界と内部境界のリストを与えてデロネー分割の初期状態を構築する
-    Delaunay(const std::vector<double>& out_boundary, const std::vector<double>& in_boundary,
-             const std::vector<double>& big_triangle)
-    {
-        exist_inner_boundary = true;
-    }
-
     //外部境界のリストを与えてデロネー分割の初期状態を構築する
     Delaunay(const std::vector<double>& out_boundary, const std::vector<double>& big_triangle)
     {
-        exist_inner_boundary = false;
 
         // 外部三角形の頂点を頂点配列に追加し、外部三角形を三角形リストに追加する。
         int i0 = add_vertices(big_triangle[0], big_triangle[1]);
@@ -126,10 +119,80 @@ class Delaunay
         }
     }
 
-    //内部境界を交差する三角形の削除
-    void modification()
+    // 任意の三角形を削除
+    void delete_triangle(const std::function<bool(const Triangle&)>& func)
     {
+        data.remove_if(func);
+    }
 
+    //三角形の探索
+    void serch_triangles(std::vector<Triangle>& findtriangles, 
+                         const std::function<bool(const Triangle&)>& func)
+    {
+        for(const Triangle& tri : data)
+        {
+            if(func(tri))
+            {
+                findtriangles.push_back(tri);
+            }
+        }
+    }
+
+    void report(const std::string& filename, const std::vector<std::string> want_data)
+    {
+        int num_vertices = vertices.size() / 2;
+        int num_triangles = data.size();
+
+        FILE* f = fopen(filename.c_str(), "w");
+
+        for(auto memodata : want_data)
+        {
+            if(memodata == "VERTEX")
+            {
+                fprintf(f, "[data:vertices]\n");
+                fprintf(f, "num_vertices: %d\n", num_vertices);
+                for(int i = 0; i < num_vertices; ++i)
+                {
+                    fprintf(f, "%.9f %.9f\n", vertices[2 * i], vertices[2 * i + 1]);
+                }
+            }
+            else if(memodata == "TRIANGLE") //このデータが必要になるのは有限要素法の時くらいかな？
+            {
+                fprintf(f, "[data:triangles]\n");
+                fprintf(f, "num_triangles: %d\n", num_triangles);
+                for(auto tri : data)
+                {
+                    fprintf(f, "%d %d %d\n", tri[0], tri[1], tri[2]);
+                }              
+            }
+            else if(memodata == "EDGE")
+            {
+                fprintf(f, "[data:edges]\n");
+                std::vector<std::array<int, 2>> edges;
+                for(auto tri : data)
+                {
+                    edges.push_back({tri[0], tri[1]});
+                    edges.push_back({tri[0], tri[2]});
+                    edges.push_back({tri[1], tri[2]});
+                }
+
+                int n = vertices.size();
+                auto compare = [&](const std::array<int, 2>& edge1, const std::array<int, 2>& edge2)
+                {
+                    return (n * edge1[0] + edge1[1]) < (n * edge2[0] + edge2[1]);
+                };
+                std::sort(edges.begin(), edges.end(), compare);
+
+                decltype(edges)::iterator iter = std::unique(edges.begin(), edges.end());
+                edges.erase(iter, edges.end());
+
+                fprintf(f, "num_edges: %d\n", edges.size());
+                for(auto edge : edges)
+                {
+                    fprintf(f, "%d %d\n", edge[0], edge[1]);
+                }
+            }
+        }
     }
 
     private:
@@ -158,23 +221,6 @@ class Delaunay
         return det * sign_triangle > 0;
     }
 
-    bool is_inner_intersect()
-    {
-
-    }
-
-    void serch_triangles(std::vector<Triangle>& findtriangles, 
-                         const std::function<bool(const Triangle&)>& func)
-    {
-        for(const Triangle& tri : data)
-        {
-            if(func(tri))
-            {
-                findtriangles.push_back(tri);
-            }
-        }
-    }
-
     // 要素の追加
     void add_triangle(const Triangle& tri)
     {
@@ -190,14 +236,6 @@ class Delaunay
         return vertices.size() / 2 - 1;
     }
 
-
-    // 任意の三角形を削除
-    void delete_triangle(const std::function<bool(const Triangle&)>& func)
-    {
-        data.remove_if(func);
-    }
-
-    bool exist_inner_boundary = false;
     std::list<Triangle> data;
     std::vector<double> vertices;
 };
