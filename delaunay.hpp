@@ -12,7 +12,7 @@ class Delaunay
 {
     public:
 
-    //外部境界のリストを与えてデロネー分割の初期状態を構築する
+    //外部境界のリストを与えてドロネー分割の初期状態を構築する
     Delaunay(const std::vector<double>& out_boundary, const std::vector<double>& big_triangle)
     {
 
@@ -22,7 +22,7 @@ class Delaunay
         int i2 = add_vertices(big_triangle[4], big_triangle[5]);
         add_triangle({i0, i1, i2});
 
-        //外部境界を頂点配列に追加し、デロネー分割を行う。
+        //外部境界を頂点配列に追加し、ドロネー分割を行う。
         for(int i = 0; i < out_boundary.size()/2; ++i)
         {
             add_point(out_boundary[2 * i], out_boundary[2 * i + 1]);
@@ -40,7 +40,7 @@ class Delaunay
         delete_triangle(delfunc);
     }
 
-    // デロネー分割を維持するように点を追加する。
+    // ドロネー分割を維持するように点を追加する。
     void add_point(double x, double y)
     {
         // 頂点配列に新しく加える頂点を格納する
@@ -112,7 +112,7 @@ class Delaunay
             }
         }
 
-        // 共有辺でない辺と追加点を結んで、新たなデロネー分割を構築する
+        // 共有辺でない辺と追加点を結んで、新たなドロネー分割を構築する
         for(const auto& e : independent_edges)
         {
             add_triangle({e[0], e[1], index});
